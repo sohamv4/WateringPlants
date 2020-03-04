@@ -1,0 +1,133 @@
+﻿@model WaterDTO
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+@Html.HiddenFor(m=>m.p1activityToDo,new { id="p1activityToDo"})
+@Html.HiddenFor(m=>m.p2activityToDo,new { id="p2activityToDo"})
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col">
+                <button type="button" class="btn btn-primary" id="p1-water" onclick="StartStopWatering('p1')"> Start/Stop Water</button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-primary" id="p2-water" onclick="StartStopWatering('p2')">Start/Stop Water</button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-primary" id="p3-water">Start/Stop Water</button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-primary" id="p4-water">Start/Stop Water</button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-primary" id="p5-water">Start/Stop Water</button>
+            </div>
+        </div>
+        <br>
+            <div class="row">
+                
+                <div class="col">
+                    Plant 1
+                    <div id="p1-water-status">
+                     
+                    </div>
+                    @*<div class="progress">
+                <div class="progress-bar">
+                     5
+                 </div>*@
+                </div>
+            
+           
+                <div class="col">
+                    Plant 2
+                    <div id="p2-water-status">
+                       
+                    </div>
+                </div>
+                <div class="col">
+                    Plant 3
+                    <div class="p1-water-status">
+                        status: 0
+                    </div>
+                </div>
+                <div class="col">
+                    Plant 4
+                    <div class="p1-water-status">
+                        status: 0
+                    </div>
+                </div>
+                <div class="col">
+                    Plant 5
+                    <div class="p1-water-status">
+                        status: 0
+                    </div>
+                </div>
+        </div>
+        </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
+        </script>
+        <script>
+            var waterLevel = 0;
+            var plantDict = new Object();
+           // var waterDTO = {};
+            var waterDTO = {"activityToDo":1, "waterLevel":0};
+            //waterDTO.activityToDo="1";
+            // waterDTO.waterLevel="0";
+            plantDict["p1"] = 0;//waterDTO.activityToDo;
+           // plantDict["p1"] = waterDTO.waterLevel;
+            plantDict["p2"] = 0;
+            
+
+        $(document).ready(function () {
+                // $('.p1-water-status').show();
+            $("#p1-water-status").html("<p>Status 0</p>");
+             $("#p2-water-status").html("<p>Status 0</p>");
+            
+            });
+            function StartStopWatering(plantNumber) {
+
+                console.log(plantNumber);
+                var activityToDo = $('#' + plantNumber + 'activityToDo').val();
+            
+            if (activityToDo == 1) {
+                activityToDo = 2;
+                $('#' + plantNumber + 'activityToDo').val(activityToDo);
+        }
+            else {
+                activityToDo = 1;
+                $('#' + plantNumber + 'activityToDo').val(activityToDo);
+              
+        }
+
+            $.ajax({
+                url: "StartWatering",
+                type: "GET",
+                data: { activityToDo, plantNumber, plantDict, waterLevel },
+                success: function (data) {
+                  //  if (data > 0)
+                    {
+                         console.log(data); 
+                        //$.each(data, function () {
+                        //    $.each(this, function (key, value) {
+                                
+                        //  $("#"+key+"-water-status").html("<p>Status " + value + "</p>");
+                        //    });
+                        //});
+                        //data.each(e => {
+
+                        //    console.log(e);
+                        //    $("#" + e.key + "-water-status").html("<p>Status " + data.value + "</p>");
+                        //});
+                       $.each(data, function(index, value){
+                           console.log(`${index}: ${value}`);
+                           $("#" + index + "-water-status").html("<p>Status " + value + "</p>");
+
+                           plantDict[index] = value;
+                        });
+                       
+        }
+}
+});
+}
+    </script>
