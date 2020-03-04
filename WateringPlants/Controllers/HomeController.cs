@@ -29,7 +29,7 @@ namespace WateringPlants.Controllers
         {
             //start water=1 && stop Water=2
             WaterDTO waterDTO = new WaterDTO();
-           // session["planActivitySession"] = new ConcurrentDictionary<string, WaterDTO>();
+           // ViewData["planActivitySession"] = plantsActivityDict;
 
             double waterlevel = 0;
 
@@ -56,17 +56,20 @@ namespace WateringPlants.Controllers
                     waterDTO.stopwatch.Stop();
                     waterlevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
                     plantsActivityDict.TryRemove(plantNumber,out waterDTO);
+                    ViewData["planActivitySession"] = plantsActivityDict;
                 }
                 else if (activityToDo == 2)
                 {
-                    waterDTO.stopwatch.Stop();
-                    waterlevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
+                    //waterDTO.stopwatch.Stop();
+                    //waterlevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
                     //if(waterlevel>10)
                     plantsActivityDict.TryRemove(plantNumber,out waterDTO);
-                    
+                    ViewData["planActivitySession"] = plantsActivityDict;
+
+
                 }
-               // waterDTO.WaterLevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
-               
+                // waterDTO.WaterLevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
+
 
                 plantDict[plantNumber] = waterlevel;
             }
