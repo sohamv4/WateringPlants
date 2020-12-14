@@ -2,7 +2,9 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using WateringPlants.Models;
@@ -12,8 +14,8 @@ namespace WateringPlants.Controllers
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-        
-        ConcurrentDictionary<string, WaterDTO> plantsActivityDict = new ConcurrentDictionary<string, WaterDTO>();
+
+      private static  ConcurrentDictionary<string, WaterDTO> plantsActivityDict;
         public HomeController(ILogger<HomeController> logger)
         {
             _logger = logger;
@@ -27,54 +29,139 @@ namespace WateringPlants.Controllers
         [Route("StartWatering")]
         public async Task<JsonResult> StartWatering(int activityToDo, string plantNumber, Dictionary<string, double> plantDict, int waterLevel = 0)
         {
-            //start water=1 && stop Water=2
-            WaterDTO waterDTO = new WaterDTO();
-           // ViewData["planActivitySession"] = plantsActivityDict;
+            //check in dict if plantActiveDict contains task and activityTodo is start or stop 
+            //if task exists and is new process then create new task with new cancellation token and add into concurrentBag
+            //if task exists and is not new process then cancel task
+
+            //if (plantDict.ContainsKey(plantNumber))
+            //{
+            if (plantsActivityDict == null)
+            {
+                plantsActivityDict = new ConcurrentDictionary<string, WaterDTO>();
+            }
+            if (activityToDo == 1 && !plantsActivityDict.ContainsKey(plantNumber))
+            {
+                var tokenSource = new CancellationTokenSource();
+                var token = tokenSource.Token;
+                //start water=1 && stop Water=2
+                WaterDTO waterDTO = new WaterDTO();
+                // ViewData["planActivitySession"] = plantsActivityDict;
+                waterDTO.tokenSource = tokenSource;
+                plantsActivityDict.TryAdd(plantNumber, waterDTO);
+
+               
+                Task t;
+                var tasks = new ConcurrentBag<Task>();
+
+                t = Task.Run(() => DoRunTask(activityToDo, plantNumber, plantDict, waterDTO, waterLevel), token);
+                tasks.Add(t);
+
+            }
+            //  }
+            else if (activityToDo == 2)
+            {
+                WaterDTO waterDTO = new WaterDTO();
+                //waterDTO.stopwatch.Stop();
+                //waterlevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
+                //if(waterlevel>10)
+                var waterObj = plantsActivityDict[plantNumber];
+                waterObj.tokenSource.Cancel();
+                plantsActivityDict.Remove(plantNumber, out waterDTO);
+                ViewData["planActivitySession"] = plantsActivityDict;
+
+
+            }
 
             double waterlevel = 0;
 
             plantDict.TryGetValue(plantNumber, out waterlevel);
-            
+
             //Stopwatch stopwatch = new Stopwatch();
 
-            if (plantDict.ContainsKey(plantNumber))
-            {
-                if (activityToDo == 1 && !plantsActivityDict.ContainsKey(plantNumber))
-                {
-                    plantsActivityDict.TryAdd(plantNumber, waterDTO);
-                    // Begin timing
-                    waterDTO.stopwatch = new Stopwatch();
-                    waterDTO.stopwatch.Start();
-                    
-                    while (waterDTO.stopwatch.Elapsed < TimeSpan.FromSeconds(100))
-                    {
-                        if(!plantsActivityDict.ContainsKey(plantNumber))
-                            waterDTO.stopwatch.Stop();
-                    }
 
-                    // Stop.s
-                    waterDTO.stopwatch.Stop();
-                    waterlevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
-                    plantsActivityDict.TryRemove(plantNumber,out waterDTO);
-                    ViewData["planActivitySession"] = plantsActivityDict;
-                }
-                else if (activityToDo == 2)
-                {
-                    //waterDTO.stopwatch.Stop();
-                    //waterlevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
-                    //if(waterlevel>10)
-                    plantsActivityDict.TryRemove(plantNumber,out waterDTO);
-                    ViewData["planActivitySession"] = plantsActivityDict;
+            //if (plantDict.ContainsKey(plantNumber))
+            //{
+            //    if (activityToDo == 1 && !plantsActivityDict.ContainsKey(plantNumber))
+            //    {
+
+            //        plantsActivityDict.TryAdd(plantNumber, waterDTO);
 
 
-                }
+            //        // Begin timing
+            //        waterDTO.stopwatch = new Stopwatch();
+            //        waterDTO.stopwatch.Start();
+            //        //  var timer = new System.Timers.Timer(10);
+            //        // timer.Elapsed+=new ElapsedEventHandler()
+
+
+            //        while (waterDTO.stopwatch.Elapsed < TimeSpan.FromSeconds(100))
+            //        {
+            //            if (!plantsActivityDict.ContainsKey(plantNumber))
+            //            {
+            //                var waterObj = plantsActivityDict[plantNumber];
+            //                waterObj.tokenSource.Cancel();
+            //                waterDTO.stopwatch.Stop();
+            //            }
+            //        }
+
+            //        // Stop.s
+            //        waterDTO.stopwatch.Stop();
+            //        waterlevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
+
+            //    }
+                //else if (activityToDo == 2)
+                //{
+                //    //waterDTO.stopwatch.Stop();
+                //    //waterlevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
+                //    //if(waterlevel>10)
+                //    var waterObj = plantsActivityDict[plantNumber];
+                //    waterObj.tokenSource.Cancel();
+                //    plantsActivityDict.TryRemove(plantNumber, out waterDTO);
+                //    ViewData["planActivitySession"] = plantsActivityDict;
+
+
+                //}
                 // waterDTO.WaterLevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
 
 
                 plantDict[plantNumber] = waterlevel;
+            
+            var jsonResult = Json(plantDict);
+            return jsonResult;
+        }
+        public async void CancelTask(CancellationTokenSource ct)
+        {
+            if (ct.IsCancellationRequested)
+            {
+                ct.Cancel();
             }
-            var jsonResult =Json(plantDict);
-            return  jsonResult;
+        }
+        public async Task DoRunTask(int activityToDo, string plantNumber, Dictionary<string, double> plantDict, WaterDTO waterDTO, int waterLevel = 0)
+        {
+
+            // Begin timing
+            waterDTO.stopwatch = new Stopwatch();
+            waterDTO.stopwatch.Start();
+            //  var timer = new System.Timers.Timer(10);
+            // timer.Elapsed+=new ElapsedEventHandler()
+
+
+            while (waterDTO.stopwatch.Elapsed < TimeSpan.FromSeconds(100))
+            {
+                if (!plantsActivityDict.ContainsKey(plantNumber))
+                {
+                    var waterObj = plantsActivityDict[plantNumber];
+                    waterObj.tokenSource.Cancel();
+                    waterDTO.stopwatch.Stop();
+                }
+            }
+
+            // Stop.s
+            waterDTO.stopwatch.Stop();
+            waterDTO.WaterLevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
+          
+            plantsActivityDict.Remove(plantNumber, out waterDTO);
+            ViewData["planActivitySession"] = plantsActivityDict;
         }
     }
 }

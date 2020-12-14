@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace WateringPlants.Models
@@ -12,6 +13,7 @@ namespace WateringPlants.Models
         public int p1activityToDo { get; set; }
         public int p2activityToDo { get; set; }
         public Stopwatch stopwatch { get; set; }
+        public CancellationTokenSource tokenSource { get; set; }
 
     }
 }
