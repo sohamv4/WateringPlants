@@ -32,14 +32,14 @@ namespace WateringPlants.Controllers
             //check in dict if plantActiveDict contains task and activityTodo is start or stop 
             //if task exists and is new process then create new task with new cancellation token and add into concurrentBag
             //if task exists and is not new process then cancel task
-
+            double waterlevel = 0;
             //if (plantDict.ContainsKey(plantNumber))
             //{
             if (plantsActivityDict == null)
             {
                 plantsActivityDict = new ConcurrentDictionary<string, WaterDTO>();
             }
-            if (activityToDo == 1 && !plantsActivityDict.ContainsKey(plantNumber))
+           if (activityToDo == 1 && !plantsActivityDict.ContainsKey(plantNumber))
             {
                 var tokenSource = new CancellationTokenSource();
                 var token = tokenSource.Token;
@@ -53,28 +53,30 @@ namespace WateringPlants.Controllers
                 Task t;
                 var tasks = new ConcurrentBag<Task>();
 
-                t = Task.Run(() => DoRunTask(activityToDo, plantNumber, plantDict, waterDTO, waterLevel), token);
+                t = Task.Run(() => DoRunTask(activityToDo, plantNumber, plantDict, waterDTO,token, waterLevel), token);
                 tasks.Add(t);
 
             }
             //  }
             else if (activityToDo == 2)
             {
-                WaterDTO waterDTO = new WaterDTO();
+               // WaterDTO waterDTO = new WaterDTO();
                 //waterDTO.stopwatch.Stop();
                 //waterlevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
                 //if(waterlevel>10)
                 var waterObj = plantsActivityDict[plantNumber];
                 waterObj.tokenSource.Cancel();
-                plantsActivityDict.Remove(plantNumber, out waterDTO);
+                waterObj.stopwatch.Stop();
+                var timeElapsed=waterObj.stopwatch.Elapsed;
+                waterlevel = timeElapsed.TotalSeconds;
+                plantsActivityDict.Remove(plantNumber, out waterObj);
                 ViewData["planActivitySession"] = plantsActivityDict;
-
-
+              
             }
 
-            double waterlevel = 0;
+           
 
-            plantDict.TryGetValue(plantNumber, out waterlevel);
+           // plantDict.TryGetValue(plantNumber, out waterlevel);
 
             //Stopwatch stopwatch = new Stopwatch();
 
@@ -136,28 +138,51 @@ namespace WateringPlants.Controllers
                 ct.Cancel();
             }
         }
-        public async Task DoRunTask(int activityToDo, string plantNumber, Dictionary<string, double> plantDict, WaterDTO waterDTO, int waterLevel = 0)
+        public async Task DoRunTask(int activityToDo, string plantNumber, Dictionary<string, double> plantDict, WaterDTO waterDTO, CancellationToken ct,int waterLevel = 0)
         {
-
+             
             // Begin timing
             waterDTO.stopwatch = new Stopwatch();
             waterDTO.stopwatch.Start();
-            //  var timer = new System.Timers.Timer(10);
+            //  var timer = new System.Timers.Timer(10); 
             // timer.Elapsed+=new ElapsedEventHandler()
 
-
+            //  for (var i = TimeSpan.Zero; i < TimeSpan.FromSeconds(100); i++)
             while (waterDTO.stopwatch.Elapsed < TimeSpan.FromSeconds(100))
             {
-                if (!plantsActivityDict.ContainsKey(plantNumber))
+                if (plantsActivityDict.ContainsKey(plantNumber))
                 {
                     var waterObj = plantsActivityDict[plantNumber];
                     waterObj.tokenSource.Cancel();
                     waterDTO.stopwatch.Stop();
                 }
+                if (ct.IsCancellationRequested)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    waterDTO.stopwatch.Stop();
+                }
+                if (TimeSpan.FromSeconds(100).TotalSeconds==100)
+                {
+                    waterDTO.stopwatch.Stop();
+                }
             }
 
+            //while (waterDTO.stopwatch.Elapsed < TimeSpan.FromSeconds(100))
+            //{
+            //    if (!plantsActivityDict.ContainsKey(plantNumber))
+            //    {
+            //        var waterObj = plantsActivityDict[plantNumber];
+            //        waterObj.tokenSource.Cancel();
+            //        waterDTO.stopwatch.Stop();
+            //    }
+            //}
+
             // Stop.s
-            waterDTO.stopwatch.Stop();
+            //if (ct.IsCancellationRequested)
+            //{
+            //    waterDTO.stopwatch.Stop();
+            //}
+            //waterDTO.stopwatch.Stop();
             waterDTO.WaterLevel = waterDTO.stopwatch.Elapsed.TotalSeconds;
           
             plantsActivityDict.Remove(plantNumber, out waterDTO);
